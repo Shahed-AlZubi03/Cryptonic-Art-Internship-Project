@@ -32,6 +32,23 @@ app.get('/', (req, res) => {
   res.send('Welcome to the Authors Management API');
 });
 
+app.get('/authors', async (req, res) => {
+  try {
+  const { name, age, book } = req.query;
+  const query = {};
+
+  if (name) query.name = { $regex: name, $options: 'i' };
+  if (age) query.age = Number(age);
+  if (book) query.books = { $regex: book, $options: 'i' };
+
+    const authors = await Author.find(query); // ✅ correct
+    res.status(200).json(authors);       
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+
 // Add a new user
 app.post('/authors', async (req, res) => {
   try {
@@ -47,15 +64,6 @@ app.post('/authors', async (req, res) => {
   }
 });
 
-// Retrieve all users
-app.get('/authors', async (req, res) => {
-  try {
-    const authors = await Author.find();    
-    res.status(200).json(authors);       
-  } catch (err) {
-    res.status(400).json({ error: err.message });
-  }
-});
 
 // Update a user by ID
 app.patch('/authors/:id', async (req, res) => {
