@@ -60,8 +60,8 @@ app.get('/calories', async (req, res) => {
   const { category, item } = req.query;
   const query = {};
 
-  if (category) query.category = category;
-  if (item) query.item = item;
+  if (category) query.category = { $regex: category, $options: 'i' };
+  if (item) query.item = { $regex: item, $options: 'i' };
 
   try {
     const results = await Calorie.find(query); // MongoDB collection
