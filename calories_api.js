@@ -1,70 +1,87 @@
-// Import necessary modules
+// server.js
 require('dotenv').config();
 const mongoose = require('mongoose');
-const express = require ('express');
+const express = require('express');
+
 const app = express();
 const PORT = process.env.PORT || 2003;
 const mongoURL = process.env.DB_URL || 'mongodb://localhost:27017/calories_db';
+
 app.use(express.json());
 
-//API key Middleware
+// API key Middleware
 const apiKeyMiddleWare = (req, res, next) => {
-const clientKey = req.headers['x-api-key'];
-const serverKey = process.env.API_KEY
-if (clientKey && clientKey === serverKey) next(); 
-else res.status(401).json({ error: 'Unauthorized: Invalid or missing API Key' });
+  const clientKey = req.headers['x-api-key'];
+  const serverKey = process.env.API_KEY;
+  if (clientKey && clientKey === serverKey) next();
+  else res.status(401).json({ error: 'Unauthorized: Invalid or missing API Key' });
 };
 
 // MongoDB Connection
 mongoose.connect(mongoURL)
-.then(()=> console.log('Connected to MongoDB'))
-.catch((err) => console.log('MongoDB connection error:', err.message));
+  .then(() => console.log('Connected to MongoDB'))
+  .catch((err) => console.log('MongoDB connection error:', err.message));
 
-//Schema Definition
+// Define Schemas
+const categorySchema = new mongoose.Schema({
+  name: { type: String, required: true, unique: true },
+  description: String
+});
+
 const calorieSchema = new mongoose.Schema({
-  category: String,
-  item: String,
+  category: { type: mongoose.Schema.Types.ObjectId, ref: 'Category', required: true },
+  item: { type: String, required: true },
   servingSize: String,
   calories: Number,
   caloriesFromFat: Number,
   totalFat: Number,
-  totalFatDailyValue: Number,
+  totalFatPercent: Number,
   saturatedFat: Number,
-  saturatedFatDailyValue: Number,
+  saturatedFatPercent: Number,
   transFat: Number,
   cholesterol: Number,
-  cholesterolDailyValue: Number,
+  cholesterolPercent: Number,
   sodium: Number,
-  sodiumDailyValue: Number,
+  sodiumPercent: Number,
   carbohydrates: Number,
-  carbohydratesDailyValue: Number,
+  carbohydratesPercent: Number,
   dietaryFiber: Number,
-  dietaryFiberDailyValue: Number,
+  dietaryFiberPercent: Number,
   sugars: Number,
   protein: Number,
-  vitaminA: Number,
-  vitaminC: Number,
-  calcium: Number,
-  iron: Number
-  
+  vitaminAPercent: Number,
+  vitaminCPercent: Number,
+  calciumPercent: Number,
+  ironPercent: Number
 });
+
+// Create Models
+const Category = mongoose.model('Category', categorySchema);
 const Calorie = mongoose.model('Calorie', calorieSchema);
-app.use('/calories', apiKeyMiddleWare); // Apply API key middleware to all /calories routes
+app.use('/calories', apiKeyMiddleWare);
 
 // Routes
 app.get('/', (req, res) => {
   res.send('Welcome to the Calories API');
 });
 
+// Get calories (with population)
 app.get('/calories', async (req, res) => {
   const { category, item } = req.query;
-  const query = {};
-
-  if (category) query.category = { $regex: category, $options: 'i' };
-  if (item) query.item = { $regex: item, $options: 'i' };
+  let filter = {};
+  if (item) filter.item = { $regex: item, $options: 'i' };
 
   try {
-    const results = await Calorie.find(query); // MongoDB collection
+    let query = Calorie.find(filter).populate('category');
+    let results = await query.exec();
+
+    // If category filter exists, filter after populate
+    if (category) {
+      results = results.filter(c =>
+        c.category.name.toLowerCase().includes(category.toLowerCase())
+      );
+    }
+
     res.json(results);
   } catch (err) {
     res.status(500).json({ error: err.message });
