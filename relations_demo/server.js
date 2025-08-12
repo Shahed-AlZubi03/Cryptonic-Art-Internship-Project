@@ -7,7 +7,7 @@ const express =require('express');
 const mongoose = require('mongoose');
 
 const PORT = process.env.PORT || 2222;
-const app=express();
+const app = express();
 
 app.use(express.json());
 const mongourl = process.env.DB_URL || 'mongodb://localhost:27017/relations_db';
@@ -29,7 +29,7 @@ mongoose.connect(mongourl)
 .catch(err => console.log('MongoDB connection error:', err.message));
 
 
-//----------- Routes -----------//
+// Routes
 app.get('/', (req,res) =>{
     res.send("Welcome to the Relations Demo API🎉");
 });
@@ -39,36 +39,20 @@ app.get('/users', async(req,res)=>{
     res.json(users)
 })
 
-// create user:
-app.post('/users', async (req, res) => {
-try{
-    const { name, email , address} = req.body;
-    if (!name || !email || !address) 
-      return res.status(400).send('All fields are required.');
-    const user = await User.create({ name, email, address});
-    res.json(user);
-    } catch(err){
-        res.status(400).json({ message: err.message });
-    }
-});
-
 // Add an address to existing user
-app.post('/users/:id/addresses', async (req, res) => {
+app.post('/users', async (req, res) => {
   try {
-    const { street, city, zip } = req.body;
-    if (!street || !city || !zip) return res.status(400).json({ error: 'All fields are required.' });
-    
-    const user = await User.findById(req.params.id);
-    if (!user) return res.status(404).json({ error: 'User not found' });
-
-    user.addresses.push({ street, city, zip });
-    await user.save();
-    res.status(201).json(user);
-  } 
-  catch (err) {
-    res.status(400).json({ error: err.message });
+    const { name, email, addresses } = req.body;
+    if (!name || !email || !addresses || !Array.isArray(addresses)) {
+      return res.status(400).send('Name, email, and addresses array are required.');
+    }
+    const user = await User.create({ name, email, addresses });
+    res.json(user);
+  } catch (err) {
+    res.status(400).json({ message: err.message });
   }
 });
+
 
 // create tag:
 app.post('/tags', async (req, res) => {
