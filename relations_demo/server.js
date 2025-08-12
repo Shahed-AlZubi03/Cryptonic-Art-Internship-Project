@@ -43,7 +43,7 @@ app.get('/users', async(req,res)=>{
 app.post('/users', async (req, res) => {
   try {
     const { name, email, addresses } = req.body;
-    if (!name || !email || !addresses || !Array.isArray(addresses)) {
+    if (!name || !email || !addresses) {
       return res.status(400).send('Name, email, and addresses array are required.');
     }
     const user = await User.create({ name, email, addresses });
@@ -72,16 +72,24 @@ app.post('/tags', async (req, res) => {
 app.post('/posts', async (req, res) => {
   try {
     const { title, content, userId, tagIds } = req.body;
-    if (!title || !content || !userId || !tagIds) 
-            return res.status(400).send('Name field is required.');
-    const post = await Post.create({ title, content, user: userId, tags: tagIds });
-    res.json(post);
+    if (!title || !content || !userId || !tagIds)
+      return res.status(400).json("All Fields Are Required!");
+    
 
+    const post = await Post.create({ title, content, user: userId, tags: tagIds });
+
+    // Populate user and tags after creation
+    const populatedPost = await Post.findById(post._id)
+      .populate('user', 'name email')
+      .populate('tags');
+
+    res.json(populatedPost);
   } catch (error) {
     console.error(error);
     res.status(400).json({ error: error.message });
   }
 });
+
 
 // get all posts:
 app.get('/posts', async (req, res) => {
